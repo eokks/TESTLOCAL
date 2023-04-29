@@ -8,7 +8,6 @@ import java.util.HashMap;
 
 class Main extends JFrame{
 
-    private static int yoursnake;
     private static Socket clientSocket; //сокет для общения
     private static BufferedReader reader; // нам нужен ридер читающий с консоли, иначе как
     // мы узнаем что хочет сказать клиент?
@@ -102,15 +101,35 @@ class Main extends JFrame{
     }
 
     public static void main(String[] args){
+        Thread changeplus = new Thread(() -> {
+            try {
+                String a =  in.readLine();
+                String directions[]  =a.split(" "); // ждём, что скажет сервер
+                for(int i = 0; i<2 ; i++){
+                    int dir = Integer.parseInt(directions[i]);
+                    if(dir % 2 == 0){
+                        snakes.get(i).changePlus((dir-3)*30,0,dir);
+                    }else{
+                        snakes.get(i).changePlus(0,(dir-2)*30,dir);
+                    }
+                }
+
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+
+        });
+
         try {
             try {
                 // адрес - локальный хост, порт - 4004, такой же как у сервера
-                clientSocket = new Socket("localhost", 4004); // этой строкой мы запрашиваем
+                clientSocket = new Socket("localhost", 80); // этой строкой мы запрашиваем
                 //  у сервера доступ на соединение
                 reader = new BufferedReader(new InputStreamReader(System.in));// читать соообщения с сервера
                 in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));// писать туда же
                 out = new BufferedWriter(new OutputStreamWriter(clientSocket.getOutputStream()));
-                yoursnake = Integer.parseInt(in.readLine()); // ждём, что скажет сервер
+                String done =  in.readLine();
+                changeplus.start();
             } finally { // в любом случае необходимо закрыть сокет и потоки
                 clientSocket.close();
                 in.close();
@@ -118,6 +137,7 @@ class Main extends JFrame{
             }
         } catch (IOException ignored) {
         }
+
 
         Thread thread1 = new Thread(() -> {
             while (true){
@@ -130,20 +150,6 @@ class Main extends JFrame{
             }
         });
 
-        Thread changeplus = new Thread(() -> {
-            try {
-                String directions[]  = in.readLine().split(" "); // ждём, что скажет сервер
-                if(Integer.parseInt(directions[yoursnake]) % 2 == 0){
-                    snakes.get(yoursnake).changePlus(0,(Integer.parseInt(directions[yoursnake])-3)*30, Integer.parseInt(directions[yoursnake]));
-                }
-                if(Integer.parseInt(directions[yoursnake]) % 2 == 1){
-                    snakes.get(yoursnake).changePlus((Integer.parseInt(directions[yoursnake])-2)*30,0, Integer.parseInt(directions[yoursnake]));
-                }
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-
-        });
 
         Thread snakeListener1 = new Thread(() -> window.addKeyListener(new KeyListener() {
             @Override
@@ -241,7 +247,6 @@ class Main extends JFrame{
         window.add(new JLabel(""));
         thread1.start();
         thread2.start();
-        changeplus.start();
         snakeListener1.start();
         window.setFocusable(true);
         window.setVisible(true);
